@@ -15,8 +15,10 @@
 import pydot
 pydot.find_graphviz = lambda: {'dot': 'C:/Users/lucsa/.conda/envs/ThermalAI/Library/bin/dot.exe'}
 
+from ann_visualizer.visualize import ann_viz
+from keras.models import model_from_json
 
-
+import tensorflow as tf
 from tensorflow import keras
 from keras.utils.vis_utils import plot_model
 
@@ -55,3 +57,37 @@ def get_sequence_model():
 
 model = get_sequence_model()
 plot_model(model, to_file='simplified_model_diagram.png', show_shapes=True, show_layer_names=True)
+# ann_viz(model, title="My Neural Network")
+
+import os
+
+# Check if the directory exists. If not, create it.
+if not os.path.exists("logs"):
+    os.makedirs("logs/model_graph")
+
+# Directory to store TensorBoard logs
+log_dir = "logs/model_graph"
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, write_graph=True)
+
+# Dummy data for a single forward pass to generate the graph in TensorBoard
+import numpy as np
+dummy_frame_features = np.random.random((1, MAX_SEQ_LENGTH, NUM_FEATURES))
+dummy_mask = np.ones((1, MAX_SEQ_LENGTH), dtype=bool)
+
+# Perform a single forward pass
+model([dummy_frame_features, dummy_mask], training=False)
+
+# Load the TensorBoard notebook extension (skip this line if not in a notebook)
+# %load_ext tensorboard
+
+# Launch TensorBoard
+# %tensorboard --logdir logs/model_graph
+
+
+
+
+
+
+
+
+
