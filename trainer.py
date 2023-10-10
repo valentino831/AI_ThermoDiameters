@@ -223,14 +223,16 @@ def prepare_single_video(frames):
 
 
 def sequence_prediction(path):
-    frames = load_video(os.path.join("test", path))
+    fv = FlirVideo(path)
+    fv.videoCut(fv.findExcitmentPeriod(100))
+    frames = load_video(fv.saveTemp())
     frame_features, frame_mask = prepare_single_video(frames)
     diam_est = sequence_model.predict([frame_features, frame_mask])[0]
 
     print(f"Estimated diam: {diam_est}")
     return diam_est
 
-exit()
+# exit()
 
 est_diam = np.zeros(len(test_df))
 diams = test_df["diam"].values
