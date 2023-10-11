@@ -10,6 +10,7 @@ import numpy as np
 import imageio
 import cv2
 import os
+import csv
 
 from flirvideo import FlirVideo
 
@@ -117,7 +118,7 @@ def prepare_all_videos(df, randomize, reps):
 
     return (frame_features, frame_masks), diams
 
-train_data, train_diams = prepare_all_videos(train_df, True, 40)
+train_data, train_diams = prepare_all_videos(train_df, True, 20)
 test_data, test_labels = prepare_all_videos(test_df, False, 1)
 
 print(f"Frame features in train set: {train_data[0].shape}")
@@ -237,12 +238,18 @@ def sequence_prediction(path):
 est_diam = np.zeros(len(test_df))
 diams = test_df["diam"].values
 
-for idx, path in enumerate(test_df["fileName"].values.tolist()):
-    print(f"Test video path: {path}")
-    est_diam[idx] = sequence_prediction(path)
+with open('out.csv', 'w', encoding='UTF8') as fd:
+    writer = csv.writer(fd)
+
+    for idx, path in enumerate(test_df["fileName"].values.tolist()):
+        print(f"Test video path: {path}")
+        est_diam[idx] = sequence_prediction(path)
+
+        writer.writerow([path, diams[idx], est_diam[idx]])
 
 plt.plot(diams, est_diam, 'r+')
 plt.plot(diams, diams)
 plt.show()
 
 print(np.sum((est_diam-diams)**2))
+print(np.sum(np.abs(est_diam-diams)))
