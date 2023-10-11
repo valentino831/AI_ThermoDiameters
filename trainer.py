@@ -19,7 +19,7 @@ BATCH_SIZE = 64
 EPOCHS = 1500
 
 # MAX_SEQ_LENGTH = 5
-MAX_SEQ_LENGTH = 140
+MAX_SEQ_LENGTH = 100
 NUM_FEATURES = 2048
 
 train_df = pd.read_csv("train.csv")
@@ -117,7 +117,7 @@ def prepare_all_videos(df, randomize, reps):
 
     return (frame_features, frame_masks), diams
 
-train_data, train_diams = prepare_all_videos(train_df, True, 20)
+train_data, train_diams = prepare_all_videos(train_df, True, 40)
 test_data, test_labels = prepare_all_videos(test_df, False, 1)
 
 print(f"Frame features in train set: {train_data[0].shape}")

@@ -3,6 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Data generated from the code
+checkpoint
+model.h5
+video_classifier.*
+
+# VS Code configs
+.vscode/*
+
 # C extensions
 *.so
 

@@ -9,6 +9,7 @@ import fnv.file
 
 class FlirVideo:
     def __init__(self, fileName):
+        # print(fileName)
         self.im = fnv.file.ImagerFile(fileName)
         self.Temp = np.empty([self.im.height, self.im.width, self.im.num_frames])
         self.time = np.empty(self.im.num_frames)

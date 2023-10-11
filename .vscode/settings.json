@@ -1,3 +1,23 @@
 {
-    "python.analysis.typeCheckingMode": "basic"
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": false,
+        "strings": false
+    },
+    "editor.acceptSuggestionOnCommitCharacter": true,
+    "editor.acceptSuggestionOnEnter": "on",
+    "editor.quickSuggestionsDelay": 10,
+    "editor.suggestOnTriggerCharacters": true,
+    "editor.tabCompletion": "on",
+    "editor.suggest.localityBonus": true,
+    "editor.suggestSelection": "first",
+    "editor.wordBasedSuggestions": true,
+    "editor.parameterHints.enabled": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+
+    },
+    "python.languageServer": "Default",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
 }
