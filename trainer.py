@@ -1,4 +1,4 @@
-from tensorflow_docs.vis import embed
+# from tensorflow_docs.vis import embed
 from tensorflow import keras
 from keras.utils import plot_model
 from imutils import paths

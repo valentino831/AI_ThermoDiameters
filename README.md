@@ -2,9 +2,23 @@
 Estimates the RSW nugget diameters from the thermographic videos
 
 # Setup
-Non mi ricordo quali package di python ho installato con pip
 
-Sicuramente va messo l'SDK di Flir. Tanti auguri ad installarlo. Prima o poi ci scrivo una guida.
+Creare un virtual environment per installare tutte le dipendenze.
+
+```
+virtualenv .venv
+source .venv/bin/activate
+```
+
+Se tutto va bene, il nome del venv appare davanti alla shell.
+
+Installa il FLIR SDK con pip. Guarda la guida (qua)[https://flir.custhelp.com/app/answers/detail/a_id/3504/~/getting-started-with-flir-science-file-sdk-for-python].
+
+Ora installa anche gli altri pacchetti necessari
+
+```
+pip install tensorflow imutils opencv-python matplotlib pandas imageio scipy
+``` 
 
 # generaDataSet.py
 Questo script python prende i video di Flir da una cartella e genera il dataset come file npz (save di una variabile NumPY).
