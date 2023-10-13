@@ -36,6 +36,7 @@ class FlirVideo:
             # this makes it easy to find min/max
             self.Temp[...,i] = np.array(self.im.final, copy=False).reshape(
                 (self.im.height, self.im.width))
+            
 
     def findExcitmentPeriod(self, nFrame):
 
@@ -87,4 +88,4 @@ class FlirVideo:
         Temp = self.Temp
 
         return Temp
-
+    

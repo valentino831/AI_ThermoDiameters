@@ -21,6 +21,7 @@ EPOCHS = 1500
 
 # MAX_SEQ_LENGTH = 5
 MAX_SEQ_LENGTH = 100
+TRAIN_RANDOM_AUG = 40
 NUM_FEATURES = 2048
 
 train_df = pd.read_csv("train.csv")
@@ -41,7 +42,28 @@ def load_video(Temp, max_frames=0, resize=(R, C)):
     len = Temp.shape[2]
     
     for i in range(len):
-        frame = np.dstack((Temp[:,:,i], 0*Temp[:,:,i], 0*Temp[:,:,i]))
+        size = Temp.shape
+
+        if size[0] < resize[0]:
+            d1 = np.int16(np.floor((resize[0]-size[0])/2))
+            d2 = np.int16(resize[0]-size[0]-d1)
+
+            T = np.append(np.zeros((d1, size[1])), np.append(Temp[:,:, i], np.zeros((d2, size[1])),axis=0),axis=0)
+        else:
+            d1 = np.int16(np.floor((size[0]-resize[0])/2))
+            T = Temp[d1:d1+resize[0], :, i]
+
+        if size[1] < resize[1]:
+            d1 = np.int16(np.floor((resize[1]-size[1])/2))
+            d2 = np.int16(resize[1]-size[1]-d1)
+
+            T = np.append(np.zeros((resize[0],d1)), np.append(T, np.zeros((resize[0],d2)),axis=1),axis=1)
+        else:
+            d1 = np.int16(np.floor((size[1]-resize[1])/2))
+            T = T[:, d1:d1+resize[1]]
+
+
+        frame = np.dstack((T[:,:], np.zeros(resize), np.zeros(resize)))
 
         frames.append(frame)
 
@@ -107,7 +129,7 @@ def prepare_all_videos(df, randomize, reps):
                     temp_frame_features[i, j, :] = feature_extractor.predict(
                         batch[None, j, :]
                     )
-                temp_frame_mask[i, :length] = 1  # 1 = not masked, 0 = masked
+                temp_frame_mask[i, :length] = fv.time[i]  # time = not masked, 0 = masked
 
             frame_features[idx*reps+videoRep,] = temp_frame_features.squeeze()
             frame_masks[idx*reps+videoRep,] = temp_frame_mask.squeeze()
@@ -118,7 +140,7 @@ def prepare_all_videos(df, randomize, reps):
 
     return (frame_features, frame_masks), diams
 
-train_data, train_diams = prepare_all_videos(train_df, True, 20)
+train_data, train_diams = prepare_all_videos(train_df, True, TRAIN_RANDOM_AUG)
 test_data, test_labels = prepare_all_videos(test_df, False, 1)
 
 print(f"Frame features in train set: {train_data[0].shape}")
