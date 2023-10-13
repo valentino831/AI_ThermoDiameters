@@ -9,6 +9,10 @@ model.h5
 video_classifier.*
 out.csv 
 
+# Data parameters
+test.csv
+train.csv
+
 # VS Code configs
 .vscode/*
 

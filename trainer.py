@@ -197,7 +197,7 @@ def plot_loss(history):
     plt.ylabel('Error [diam]')
     plt.legend()
     plt.grid(True)
-    plt.show()
+    plt.savefig('history.pdf')
 
 def run_experiment():
     filepath = "./video_classifier"
@@ -271,7 +271,7 @@ with open('out.csv', 'w', encoding='UTF8') as fd:
 
 plt.plot(diams, est_diam, 'r+')
 plt.plot(diams, diams)
-plt.show()
+plt.savefig('validation.pdf')
 
 print(np.sum((est_diam-diams)**2))
 print(np.sum(np.abs(est_diam-diams)))
