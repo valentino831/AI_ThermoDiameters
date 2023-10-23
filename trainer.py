@@ -22,11 +22,11 @@ BATCH_SIZE = 64
 EPOCHS = 1500
 
 # MAX_SEQ_LENGTH = 5
-MAX_SEQ_LENGTH = 100
-TRAIN_RANDOM_AUG = 20
+MAX_SEQ_LENGTH = 1500
+TRAIN_RANDOM_AUG = 25
 NUM_FEATURES = 2048
 
-MAX_THREAD_WORKERS = 3
+MAX_THREAD_WORKERS = 15
 
 train_df = pd.read_csv("train.csv")
 test_df = pd.read_csv("test.csv")
