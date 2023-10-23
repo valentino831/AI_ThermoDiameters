@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --gres=gpu:1
+#SBATCH --job-name=flir-trainer
+#SBATCH --mail-type=ALL
+#SBATCH --partition=cuda
+
+module load nvidia/cudasdk/11.6
+module load intel/python/3
+
+source .venv/bin/activate
+
+python trainer.py
