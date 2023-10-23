@@ -3,6 +3,8 @@ from tensorflow import keras
 from keras.utils import plot_model
 from imutils import paths
 
+from concurrent.futures import ThreadPoolExecutor
+
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
@@ -21,8 +23,10 @@ EPOCHS = 1500
 
 # MAX_SEQ_LENGTH = 5
 MAX_SEQ_LENGTH = 100
-TRAIN_RANDOM_AUG = 40
+TRAIN_RANDOM_AUG = 20
 NUM_FEATURES = 2048
+
+MAX_THREAD_WORKERS = 3
 
 train_df = pd.read_csv("train.csv")
 test_df = pd.read_csv("test.csv")
@@ -86,6 +90,33 @@ def build_feature_extractor():
 
 feature_extractor = build_feature_extractor()
 
+def prepare_video(fv, randomize, frame_features, frame_masks, diams, diam, videoRep, idx, reps):
+    # Gather all its frames and add a batch dimension.
+    if randomize:
+        frames = load_video(fv.generateRandomData())
+    else:
+        frames = load_video(fv.saveTemp())
+
+    frames = frames[None, ...]
+
+    # Initialize placeholders to store the masks and features of the current video.
+    temp_frame_mask = np.zeros(shape=(1, MAX_SEQ_LENGTH,), dtype="bool")
+    temp_frame_features = np.zeros(shape=(1, MAX_SEQ_LENGTH, NUM_FEATURES), dtype="float32")
+
+    # Extract features from the frames of the current video.
+    for i, batch in enumerate(frames):
+        video_length = batch.shape[0]
+        length = min(MAX_SEQ_LENGTH, video_length)
+        for j in range(length):
+            temp_frame_features[i, j, :] = feature_extractor.predict(batch[None, j, :])
+        temp_frame_mask[i, :length] = 1  # 1 = not masked, 0 = masked
+
+    frame_features[idx*reps+videoRep,] = temp_frame_features.squeeze()
+    frame_masks[idx*reps+videoRep,] = temp_frame_mask.squeeze()
+
+    diams[idx*reps+videoRep] = diam
+
+
 def prepare_all_videos(df, randomize, reps):
     num_samples = len(df)*reps
     video_paths = df["fileName"].values.tolist()
@@ -101,43 +132,18 @@ def prepare_all_videos(df, randomize, reps):
     )
     diams = np.zeros(shape=(num_samples,1), dtype="float32")
  
-    # For each video.
-    for idx, path in enumerate(video_paths):
-        fv = FlirVideo(path)
-        fv.videoCut(fv.findExcitmentPeriod(100))
+    fv = []
 
-        for videoRep in range(reps):
-            # Gather all its frames and add a batch dimension.
-            if randomize:
-                frames = load_video(fv.generateRandomData())
-            else:
-                frames = load_video(fv.saveTemp())
+    with ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
+        # For each video.
+        for idx, path in enumerate(video_paths):
+            fv.append(FlirVideo(path))
+            fv[idx].videoCut(fv[idx].findExcitmentPeriod(100))
 
-            frames = frames[None, ...]
+            for videoRep in range(reps):
+                executor.submit(prepare_video, fv[idx], randomize, frame_features, frame_masks, diams, df["diam"].values[idx], videoRep, idx, reps)
 
-            # Initialize placeholders to store the masks and features of the current video.
-            temp_frame_mask = np.zeros(shape=(1, MAX_SEQ_LENGTH,), dtype="bool")
-            temp_frame_features = np.zeros(
-                shape=(1, MAX_SEQ_LENGTH, NUM_FEATURES), dtype="float32"
-            )
-
-            # Extract features from the frames of the current video.
-            for i, batch in enumerate(frames):
-                video_length = batch.shape[0]
-                length = min(MAX_SEQ_LENGTH, video_length)
-                for j in range(length):
-                    temp_frame_features[i, j, :] = feature_extractor.predict(
-                        batch[None, j, :]
-                    )
-                temp_frame_mask[i, :length] = fv.time[i]  # time = not masked, 0 = masked
-
-            frame_features[idx*reps+videoRep,] = temp_frame_features.squeeze()
-            frame_masks[idx*reps+videoRep,] = temp_frame_mask.squeeze()
-
-            diams[idx*reps+videoRep] = df["diam"].values[idx]
-
-        fv = []
-
+    fv = []
     return (frame_features, frame_masks), diams
 
 train_data, train_diams = prepare_all_videos(train_df, True, TRAIN_RANDOM_AUG)
@@ -269,6 +275,7 @@ with open('out.csv', 'w', encoding='UTF8') as fd:
 
         writer.writerow([path, diams[idx], est_diam[idx]])
 
+plt.clf()
 plt.plot(diams, est_diam, 'r+')
 plt.plot(diams, diams)
 plt.savefig('validation.pdf')
