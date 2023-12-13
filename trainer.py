@@ -16,23 +16,23 @@ import csv
 
 from flirvideo import FlirVideo
 
-R = 136
-C = 144
+R = 120
+C = 128
 BATCH_SIZE = 64
 EPOCHS = 1500
 
 # MAX_SEQ_LENGTH = 5
-MAX_SEQ_LENGTH = 1500
-TRAIN_RANDOM_AUG = 25
+MAX_SEQ_LENGTH = 800
+TRAIN_RANDOM_AUG = 5
 NUM_FEATURES = 2048
 
-MAX_THREAD_WORKERS = 15
+MAX_THREAD_WORKERS = 12
 
 train_df = pd.read_csv("train.csv")
 test_df = pd.read_csv("test.csv")
 
-print(f"Total videos for training: {len(train_df)}")
-print(f"Total videos for testing: {len(test_df)}")
+# print(f"Total videos for training: {len(train_df)}")
+# print(f"Total videos for testing: {len(test_df)}")
 
 # train_df.sample(10)
 
@@ -90,7 +90,7 @@ def build_feature_extractor():
 
 feature_extractor = build_feature_extractor()
 
-def prepare_video(fv, randomize, frame_features, frame_masks, diams, diam, videoRep, idx, reps):
+def prepare_video(fv, randomize, frame_features, frame_masks, nugDiams, nugDiam, CBDiams, CBDiam, videoRep, idx, reps):
     # Gather all its frames and add a batch dimension.
     if randomize:
         frames = load_video(fv.generateRandomData())
@@ -114,7 +114,8 @@ def prepare_video(fv, randomize, frame_features, frame_masks, diams, diam, video
     frame_features[idx*reps+videoRep,] = temp_frame_features.squeeze()
     frame_masks[idx*reps+videoRep,] = temp_frame_mask.squeeze()
 
-    diams[idx*reps+videoRep] = diam
+    nugDiams[idx*reps+videoRep] = nugDiam
+    CBDiams[idx*reps+videoRep] = CBDiam
 
 
 def prepare_all_videos(df, randomize, reps):
@@ -130,7 +131,8 @@ def prepare_all_videos(df, randomize, reps):
     frame_features = np.zeros(
         shape=(num_samples, MAX_SEQ_LENGTH, NUM_FEATURES), dtype="float32"
     )
-    diams = np.zeros(shape=(num_samples,1), dtype="float32")
+    nugDiams = np.zeros(shape=(num_samples,1), dtype="float32")
+    CBDiams = np.zeros(shape=(num_samples,1), dtype="float32")
  
     fv = []
 
@@ -138,19 +140,21 @@ def prepare_all_videos(df, randomize, reps):
         # For each video.
         for idx, path in enumerate(video_paths):
             fv.append(FlirVideo(path))
-            fv[idx].videoCut(fv[idx].findExcitmentPeriod(100))
+            # print("Preparing idx = " + str(idx))
+            # print("Cut range: " + str(fv[idx].findExcitmentPeriod(200)))
+            fv[idx].videoCut(fv[idx].findExcitmentPeriod(200))
 
             for videoRep in range(reps):
-                executor.submit(prepare_video, fv[idx], randomize, frame_features, frame_masks, diams, df["diam"].values[idx], videoRep, idx, reps)
+                executor.submit(prepare_video, fv[idx], randomize, frame_features, frame_masks, nugDiams, df["Nugget"].values[idx], CBDiams, df["CB"].values[idx], videoRep, idx, reps)
 
     fv = []
-    return (frame_features, frame_masks), diams
+    return (frame_features, frame_masks), nugDiams, CBDiams
 
-train_data, train_diams = prepare_all_videos(train_df, True, TRAIN_RANDOM_AUG)
-test_data, test_labels = prepare_all_videos(test_df, False, 1)
+train_data, train_nugDiams, train_CBDiams = prepare_all_videos(train_df, True, TRAIN_RANDOM_AUG)
+test_data, test_nugDiams, test_CBDiams = prepare_all_videos(test_df, False, 1)
 
-print(f"Frame features in train set: {train_data[0].shape}")
-print(f"Frame masks in train set: {train_data[1].shape}")
+# print(f"Frame features in train set: {train_data[0].shape}")
+# print(f"Frame masks in train set: {train_data[1].shape}")
 
 def get_sequence_model():
     frame_features_input = keras.Input((MAX_SEQ_LENGTH, NUM_FEATURES))
@@ -177,21 +181,25 @@ def get_sequence_model():
     # x = keras.layers.Dense(8, activation="relu")(x)
     # x = keras.layers.Dropout(0.5)(x)
 
-    x = keras.layers.GRU(24, return_sequences=True)(
-        frame_features_input, mask=mask_input
-    )
-    x = keras.layers.Dropout(0.6)(x)
-    x = keras.layers.GRU(18)(x)
+    # x = keras.layers.GRU(32, return_sequences=True)(
+    #     frame_features_input, mask=mask_input
+    # )
+
+    x = keras.layers.GRU(32, return_sequences=True)(
+        frame_features_input)
     x = keras.layers.Dropout(0.5)(x)
+    x = keras.layers.GRU(16)(x)
+    x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
-    x = keras.layers.Dropout(0.5)(x)
+    x = keras.layers.Dropout(0.4)(x)
 
-    output = keras.layers.Dense(1, activation="relu")(x)
+    out1 = keras.layers.Dense(1, activation="linear", name='Nugget')(x)
+    out2 = keras.layers.Dense(1, activation="linear", name='CB')(x)
 
-    rnn_model = keras.Model([frame_features_input, mask_input], output)
+    rnn_model = keras.Model(frame_features_input, [out1, out2])
 
     rnn_model.compile(
-        loss="mean_absolute_error", optimizer="adam", metrics="mean_absolute_error"
+        loss="mean_absolute_error", optimizer="adam", metrics=["mae", "mse"]
     )
     return rnn_model
 
@@ -200,7 +208,7 @@ def plot_loss(history):
     plt.plot(history.history['val_loss'], label='val_loss')
     plt.ylim([0, 10])
     plt.xlabel('Epoch')
-    plt.ylabel('Error [diam]')
+    plt.ylabel('Error')
     plt.legend()
     plt.grid(True)
     plt.savefig('history.pdf')
@@ -212,14 +220,14 @@ def run_experiment():
     )
 
     seq_model = get_sequence_model()
-    print(seq_model.summary())
+    # print(seq_model.summary())
     # plot_model(seq_model, to_file='model.png', show_shapes=True, show_layer_names=True)
     history = seq_model.fit(
-        [train_data[0], train_data[1]],
-        train_diams,
-        validation_split=0.2,
+        train_data[0],
+        [train_nugDiams, train_CBDiams],
         epochs=EPOCHS,
         callbacks=[checkpoint],
+        validation_data=(test_data[0], [test_nugDiams, test_CBDiams])
     )
 
     plot_loss(history)
@@ -228,8 +236,8 @@ def run_experiment():
     # history = []
 
     seq_model.load_weights(filepath)
-    _, mse = seq_model.evaluate([test_data[0], test_data[1]], test_labels)
-    print(f"Validation MAE {mse}")
+    # _, mse = seq_model.evaluate(test_data[0], [test_nugDiams, test_CBDiams])
+    # print(f"Validation MAE {mse}")
 
     return history, seq_model
 
@@ -256,29 +264,30 @@ def sequence_prediction(path):
     fv.videoCut(fv.findExcitmentPeriod(100))
     frames = load_video(fv.saveTemp())
     frame_features, frame_mask = prepare_single_video(frames)
-    diam_est = sequence_model.predict([frame_features, frame_mask])[0]
+    diams = sequence_model.predict([frame_features])
+    # print(f"Estimated diams: {diams[0]}, {diams[1]}")
+    return diams[0], diams[1]
 
-    print(f"Estimated diam: {diam_est}")
-    return diam_est
-
-# exit()
-
-est_diam = np.zeros(len(test_df))
-diams = test_df["diam"].values
+est_nugDiam = np.zeros(len(test_df))
+est_CBDiam = np.zeros(len(test_df))
+nugDiams = test_df["Nugget"].values
+CBDiams = test_df["CB"].values
 
 with open('out.csv', 'w', encoding='UTF8') as fd:
     writer = csv.writer(fd)
 
     for idx, path in enumerate(test_df["fileName"].values.tolist()):
-        print(f"Test video path: {path}")
-        est_diam[idx] = sequence_prediction(path)
+        # print(f"Test video path: {path}")
+        est_nugDiam[idx], est_CBDiam[idx] = sequence_prediction(path)
 
-        writer.writerow([path, diams[idx], est_diam[idx]])
+        writer.writerow([path, nugDiams[idx], CBDiams[idx], est_nugDiam[idx], est_CBDiam[idx]])
 
 plt.clf()
-plt.plot(diams, est_diam, 'r+')
-plt.plot(diams, diams)
-plt.savefig('validation.pdf')
+plt.plot(nugDiams, est_nugDiam, 'r+')
+plt.plot(nugDiams, nugDiams)
+plt.savefig('validation_nugget.pdf')
 
-print(np.sum((est_diam-diams)**2))
-print(np.sum(np.abs(est_diam-diams)))
+plt.clf()
+plt.plot(CBDiams, est_CBDiam, 'r+')
+plt.plot(CBDiams, CBDiams)
+plt.savefig('validation_CB.pdf')

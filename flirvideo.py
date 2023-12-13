@@ -10,10 +10,10 @@ import fnv.file
 class FlirVideo:
     def __init__(self, fileName):
         # print(fileName)
+        self.fileName = fileName
         self.im = fnv.file.ImagerFile(fileName)
         self.Temp = np.empty([self.im.height, self.im.width, self.im.num_frames])
         self.time = np.empty(self.im.num_frames)
-
         self.im.get_frame(0)
         
         data_0 = self.im.frame_info.time
@@ -44,7 +44,7 @@ class FlirVideo:
         # plt.plot(self.time, self.Temp[idx[0][0], idx[1][0],:])
         t = self.Temp[idx[0][0], idx[1][0],:].reshape(self.time.shape)
 
-        idxIni = np.where(t>=3.5*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
+        idxIni = np.where(t>=3.7*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
         
         ii = idxIni[0][0]
         jj = ii
