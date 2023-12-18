@@ -41,11 +41,12 @@ class FlirVideo:
     def findExcitmentPeriod(self, nFrame):
 
         idx = np.where(self.Temp==self.Temp.max())
-        # plt.plot(self.time, self.Temp[idx[0][0], idx[1][0],:])
+        plt.plot(self.time, self.Temp[idx[0][0], idx[1][0],:])
+        plt.show()
         t = self.Temp[idx[0][0], idx[1][0],:].reshape(self.time.shape)
 
         idxIni = np.where(t>=3.7*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
-        
+        print(f"idxIni {idxIni}")
         ii = idxIni[0][0]
         jj = ii
         fine = False
@@ -64,6 +65,8 @@ class FlirVideo:
                 fine = True
 
             ii = zz
+            if ii == t.size:
+                fine = True
     
         return [idxIni[0][0], jj]
 
