@@ -262,7 +262,7 @@ def prepare_single_video(frames):
 
 def sequence_prediction(path):
     fv = FlirVideo(path)
-    fv.videoCut(fv.findExcitmentPeriod(100))
+    fv.videoCut(fv.findExcitmentPeriod(200))
     frames = load_video(fv.saveTemp())
     frame_features, frame_mask = prepare_single_video(frames)
     diams = sequence_model.predict([frame_features])
