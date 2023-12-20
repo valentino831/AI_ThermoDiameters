@@ -37,13 +37,15 @@ class FlirVideo:
             self.Temp[...,i] = np.array(self.im.final, copy=False).reshape(
                 (self.im.height, self.im.width))
             
-
     def findExcitmentPeriod(self, nFrame):
 
         idx = np.where(self.Temp==self.Temp.max())
         t = self.Temp[idx[0][0], idx[1][0],:].reshape(self.time.shape)
 
-        idxIni = np.where(t>=3.7*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
+        # idxIni = np.where(t>=3.5*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
+        tMean = np.mean(t[:nFrame])
+        deltaTMax = abs(t[:nFrame]-tMean).max()
+        idxIni = np.where(t>=1.05*deltaTMax+tMean)
 
         ii = idxIni[0][0]
         jj = ii
@@ -90,3 +92,14 @@ class FlirVideo:
 
         return Temp
     
+# if __name__ == "__main__":
+#     import pandas as pd
+
+#     test_df = pd.read_csv("test2.csv")
+#     for idx, path in enumerate(test_df["fileName"].values.tolist()):
+#         fv = FlirVideo(path)
+
+#         print(f"Video file {path}")
+
+#         print(f"Video Cut in {fv.findExcitmentPeriod(250)}")
+
