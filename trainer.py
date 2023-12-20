@@ -187,11 +187,12 @@ def get_sequence_model():
 
     x = keras.layers.GRU(32, return_sequences=True)(
         frame_features_input)
-    x = keras.layers.Dropout(0.5)(x)
+    x = keras.layers.Dropout(0.4)(x)
     x = keras.layers.GRU(16)(x)
-    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dropout(0.2)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
-    x = keras.layers.Dropout(0.4)(x)
+    x = keras.layers.Dropout(0.2)(x)
+    x = keras.layers.Dense(4, activation="relu")(x)
 
     out1 = keras.layers.Dense(1, activation="linear", name='Nugget')(x)
     out2 = keras.layers.Dense(1, activation="linear", name='CB')(x)
