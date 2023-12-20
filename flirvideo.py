@@ -9,7 +9,7 @@ import fnv.file
 
 class FlirVideo:
     def __init__(self, fileName):
-        # print(fileName)
+
         self.fileName = fileName
         self.im = fnv.file.ImagerFile(fileName)
         self.Temp = np.empty([self.im.height, self.im.width, self.im.num_frames])
@@ -44,7 +44,7 @@ class FlirVideo:
         t = self.Temp[idx[0][0], idx[1][0],:].reshape(self.time.shape)
 
         idxIni = np.where(t>=3.7*np.sqrt(np.var(t[:nFrame]))+np.mean(t[:nFrame]))
-        print(f"idxIni {idxIni}")
+
         ii = idxIni[0][0]
         jj = ii
         fine = False
