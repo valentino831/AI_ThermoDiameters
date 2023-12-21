@@ -153,6 +153,14 @@ def prepare_all_videos(df, randomize, reps):
 train_data, train_nugDiams, train_CBDiams = prepare_all_videos(train_df, True, TRAIN_RANDOM_AUG)
 test_data, test_nugDiams, test_CBDiams = prepare_all_videos(test_df, False, 1)
 
+normNugDiam = test_nugDiams.max()
+train_nugDiams = train_nugDiams/normNugDiam
+test_nugDiams = test_nugDiams/normNugDiam
+
+normCBDiam = test_CBDiams.max()
+train_CBDiams = train_CBDiams/normCBDiam
+test_CBDiams = test_CBDiams/normCBDiam
+
 # print(f"Frame features in train set: {train_data[0].shape}")
 # print(f"Frame masks in train set: {train_data[1].shape}")
 
@@ -185,14 +193,14 @@ def get_sequence_model():
     #     frame_features_input, mask=mask_input
     # )
 
-    x = keras.layers.GRU(32, return_sequences=True)(
+    x = keras.layers.GRU(64, return_sequences=True)(
         frame_features_input)
     x = keras.layers.Dropout(0.4)(x)
-    x = keras.layers.GRU(16)(x)
+    x = keras.layers.GRU(32)(x)
+    x = keras.layers.Dropout(0.2)(x)
+    x = keras.layers.Dense(16, activation="relu")(x)
     x = keras.layers.Dropout(0.2)(x)
     x = keras.layers.Dense(8, activation="relu")(x)
-    x = keras.layers.Dropout(0.2)(x)
-    x = keras.layers.Dense(4, activation="relu")(x)
 
     out1 = keras.layers.Dense(1, activation="linear", name='Nugget')(x)
     out2 = keras.layers.Dense(1, activation="linear", name='CB')(x)
@@ -281,14 +289,14 @@ with open('out.csv', 'w', encoding='UTF8') as fd:
         # print(f"Test video path: {path}")
         est_nugDiam[idx], est_CBDiam[idx] = sequence_prediction(path)
 
-        writer.writerow([path, nugDiams[idx], CBDiams[idx], est_nugDiam[idx], est_CBDiam[idx]])
+        writer.writerow([path, nugDiams[idx], CBDiams[idx], est_nugDiam[idx]*normNugDiam, est_CBDiam[idx]*normCBDiam])
 
 plt.clf()
-plt.plot(nugDiams, est_nugDiam, 'r+')
+plt.plot(nugDiams, est_nugDiam*normNugDiam, 'r+')
 plt.plot(nugDiams, nugDiams)
 plt.savefig('validation_nugget.pdf')
 
 plt.clf()
-plt.plot(CBDiams, est_CBDiam, 'r+')
+plt.plot(CBDiams, est_CBDiam*normCBDiam, 'r+')
 plt.plot(CBDiams, CBDiams)
 plt.savefig('validation_CB.pdf')
