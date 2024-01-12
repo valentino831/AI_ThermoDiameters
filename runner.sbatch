@@ -6,8 +6,8 @@
 #SBATCH --job-name=flir-trainer
 #SBATCH --mail-type=ALL
 #SBATCH --partition=cuda
-#SBATCH --mem-per-cpu=160G
-#SBATCH --time=20:00:00
+#SBATCH --mem-per-cpu=200G
+#SBATCH --time=30:00:00
 
 module load nvidia/cudasdk/11.6
 module load intel/python/3
