@@ -13,7 +13,8 @@ class FlirVideo:
         self.im = fnv.file.ImagerFile(fileName)
         self.Temp = np.empty([self.im.height, self.im.width, self.im.num_frames])
         self.time = np.empty(self.im.num_frames)
-
+        self.Tempbatshe = 0
+        
         self.im.get_frame(0)
         
         data_0 = self.im.frame_info.time
@@ -71,7 +72,61 @@ class FlirVideo:
         self.Temp = self.Temp[:,:,idxs[0]:idxs[1]]
         self.time = self.time[idxs[0]:idxs[1]]
         self.time = self.time-self.time[0]
+        
+    def videoCutbatch(self, SEQ_LENGTH):
+        n = self.im.num_frames % SEQ_LENGTH
+        if n/SEQ_LENGTH > 0.8:
+            arr2 = np.zeros((self.im.height, self.im.width, int((SEQ_LENGTH -n))))
+            self.Temp = np.concatenate((self.Temp, arr2), axis=2)
+        else :       
+            self.Temp = self.Temp[:,:,:-n]
+        s  = np.shape(self.Temp)[-1] / SEQ_LENGTH
+        self.Tempbatshe = np.split(self.Temp,s,axis=2)
+            
+        
+       
+        #self.Temp-batshe = np.empty([self.im.height, self.im.width, self.im.num_frames,SEQ_LENGTH])
+        #self.time-batche = np.empty(self.im.num_frames)
+        #self.Temp = self.Temp[:,:,idxs[0]:idxs[1]]
+        #self.time = self.time[idxs[0]:idxs[1]]
+        #self.time = self.time-self.time[0]
+    def load_video(self, max_frames=0, resize=(136,144)):
+        Temp = self.Temp
+        min = Temp.min()
+        max = Temp.max()
 
+        Temp = 255*(Temp-min)/(max-min)
+
+        frames = []
+        len = Temp.shape[2]
+        
+        for i in range(len):
+            size = Temp.shape
+
+            if size[0] < resize[0]:
+                d1 = np.int16(np.floor((resize[0]-size[0])/2))
+                d2 = np.int16(resize[0]-size[0]-d1)
+
+                T = np.append(np.zeros((d1, size[1])), np.append(Temp[:,:, i], np.zeros((d2, size[1])),axis=0),axis=0)
+            else:
+                d1 = np.int16(np.floor((size[0]-resize[0])/2))
+                T = Temp[d1:d1+resize[0], :, i]
+
+            if size[1] < resize[1]:
+                d1 = np.int16(np.floor((resize[1]-size[1])/2))
+                d2 = np.int16(resize[1]-size[1]-d1)
+
+                T = np.append(np.zeros((resize[0],d1)), np.append(T, np.zeros((resize[0],d2)),axis=1),axis=1)
+            else:
+                d1 = np.int16(np.floor((size[1]-resize[1])/2))
+                T = T[:, d1:d1+resize[1]]
+
+
+            frame = np.dstack((T[:,:], np.zeros(resize), np.zeros(resize)))
+
+            frames.append(frame)
+
+        return np.array(frames)
     def generateRandomData(self):
         angle = 360*np.random.random()
         Temp = self.Temp
